@@ -239,7 +239,6 @@ namespace WindowsFormsApp17
 
                 //open and read frequency file
                 string frequencyFile = filename.Split('.')[0] + "_frequency.txt";
-                //string[] content = System.IO.File.ReadAllLines(frequencyFile);
                 string[] raw_content = System.IO.File.ReadAllLines(frequencyFile);
                 string content = raw_content[0];
                 for(int i = 1; i < raw_content.Length; i++)
@@ -248,13 +247,12 @@ namespace WindowsFormsApp17
                 }
 
                 //push frequency to dictionary
-                //string[] dic_content = content[0].Split(',');
-                string[] dic_content = content.Split(',');
+                string[] dic_content = content.Split('\u09f0');
                 IDictionary<char, int> table = new Dictionary<char, int>();
                 for(int i = 0; i < dic_content.Length; i++)
                 {
                     char key = dic_content[i][0];
-                    int value = Int32.Parse(dic_content[i][2].ToString());
+                    int value = Int32.Parse(dic_content[i].Substring(2));
                     table.Add(key, value);
                 }
 
@@ -289,7 +287,6 @@ namespace WindowsFormsApp17
                         decoded += currentNode.character;
                         decoded_for_preview += currentNode.character;
                         currentNode = root;
-                        Console.WriteLine("load: {0}\n", decoded);
                     }
                 }
                 textBox2.Text = decoded_for_preview;
@@ -335,7 +332,7 @@ namespace WindowsFormsApp17
                 string freq = "";
                 foreach (var kvp in frequency_table)
                 {
-                    freq += kvp.Key + ":" + kvp.Value.ToString() + ',';
+                    freq += kvp.Key + ":" + kvp.Value.ToString() + '\u09f0';
                 }
                 freq = freq.Remove(freq.Length - 1);
                 StreamWriter sw = new StreamWriter(fs_table);
