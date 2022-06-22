@@ -14,15 +14,22 @@ namespace WindowsFormsApp17
 {
     public partial class Form1 : Form
     {
+        enum AlgorithmType
+        {
+            HuffmanCoding, LZWcoding, ArithmeticCoding, None
+        }
         public Form1()
         {
             InitializeComponent();
         }
 
+        AlgorithmType algorithm = AlgorithmType.None;
         int thuattoan = 0;
         string filename = "";
+        string filesavename = "";
         char black_box = '\u25a0';
         IDictionary<char, int> frequency_table = new Dictionary<char, int>();
+        IDictionary<char, double> probility_table = new Dictionary<char, double>();
 
         struct mang
         {
@@ -182,7 +189,7 @@ namespace WindowsFormsApp17
 
         private void button2_Click(object sender, EventArgs e)
         {
-            
+            algorithm = AlgorithmType.HuffmanCoding;
             string lines = "";
             if (System.IO.File.Exists(filename))
             {
@@ -298,7 +305,7 @@ namespace WindowsFormsApp17
             var bitsToPad = 8 - encoded.Length % 8;
             if(bitsToPad != 8)
             {
-                encoded += new string('1', bitsToPad);
+                encoded += new string('0', bitsToPad);
             }
             var numofBytes = encoded.Length / 8;
             byte[] bytes = new byte[numofBytes];
@@ -314,32 +321,67 @@ namespace WindowsFormsApp17
         {
             if (System.IO.File.Exists(filename))
             {
-                SaveFileDialog dlg = new SaveFileDialog();
-                dlg.ShowDialog();
-                filename = dlg.FileName;
 
-                //save binary file
-                FileStream fs = new FileStream(dlg.FileName, FileMode.Create);
-                BinaryWriter bw = new BinaryWriter(fs);
-                string encoded = textBox2.Text;
-                byte[] arr = padding(encoded);
-                bw.Write(arr);
-                bw.Close();
-
-                //save frequency of character to extention file
-                string new_name = filename.Split('.')[0] + "_frequency.txt";
-                FileStream fs_table = new FileStream(new_name, FileMode.Create);
-                string freq = "";
-                foreach (var kvp in frequency_table)
+                if (algorithm == AlgorithmType.HuffmanCoding)
                 {
-                    freq += kvp.Key + ":" + kvp.Value.ToString() + '\u09f0';
-                }
-                freq = freq.Remove(freq.Length - 1);
-                StreamWriter sw = new StreamWriter(fs_table);
-                sw.Write(freq);
-                sw.Close();
+                    SaveFileDialog dlg = new SaveFileDialog();
+                    dlg.ShowDialog();
+                    filesavename = dlg.FileName;
 
-                frequency_table.Clear();
+                    //save binary file
+                    FileStream fs = new FileStream(dlg.FileName, FileMode.Create);
+                    BinaryWriter bw = new BinaryWriter(fs);
+                    string encoded = textBox2.Text;
+                    byte[] arr = padding(encoded);
+                    bw.Write(arr);
+                    bw.Close();
+
+                    //save frequency of character to extention file
+                    string new_name = filesavename.Split('.')[0] + "_frequency.txt";
+                    FileStream fs_table = new FileStream(new_name, FileMode.Create);
+                    string freq = "";
+                    foreach (var kvp in frequency_table)
+                    {
+                        freq += kvp.Key + ":" + kvp.Value.ToString() + '\u09f0';
+                    }
+                    freq = freq.Remove(freq.Length - 1);
+                    StreamWriter sw = new StreamWriter(fs_table);
+                    sw.Write(freq);
+                    sw.Close();
+
+                    frequency_table.Clear();
+                }
+
+                if(algorithm == AlgorithmType.ArithmeticCoding)
+                {
+                    SaveFileDialog dlg = new SaveFileDialog();
+                    dlg.ShowDialog();
+                    filesavename = dlg.FileName;
+
+                    //save binary file
+                    FileStream fs = new FileStream(dlg.FileName, FileMode.Create);
+                    BinaryWriter bw = new BinaryWriter(fs);
+                    string encoded = textBox2.Text;
+                    byte[] arr = padding(encoded);
+                    bw.Write(arr);
+                    bw.Close();
+
+                    //save frequency of character to extention file
+                    string new_name = filesavename.Split('.')[0] + "_probility.txt";
+                    FileStream fs_table = new FileStream(new_name, FileMode.Create);
+                    string prob = "";
+                    foreach(var kvp in probility_table)
+                    {
+                        prob += kvp.Key + ":" + kvp.Value.ToString() + '\u09f0';
+                    }
+                    prob = prob.Remove(prob.Length - 1);
+                    StreamWriter sw = new StreamWriter(fs_table);
+                    sw.Write(prob);
+                    sw.Close();
+
+                    probility_table.Clear();
+                }
+
             }
         }
 
@@ -436,6 +478,7 @@ namespace WindowsFormsApp17
         }
         private void button5_Click(object sender, EventArgs e)
         {
+            algorithm = AlgorithmType.LZWcoding;
             string lines = "";
             if (System.IO.File.Exists(filename))
             {
@@ -445,9 +488,6 @@ namespace WindowsFormsApp17
                     lines = lines + line[i] + '\n';
                 };
                 lines += line[line.Length - 1];
-                /*string kq = "";
-                kq = LZW_coding(lines);
-                textBox2.Text = kq;*/
                 encodeLZW(lines);
             };
             
@@ -594,12 +634,113 @@ namespace WindowsFormsApp17
             return kq;
         }
 
+        double fractionBinarytoDecimal(string bin)
+        {
+            if(bin == "")
+            {
+                return 0.0;
+            }
+            double answer = 0.0, powerofTwo = 2.0;
+            for(int i = 0; i < bin.Length; i++)
+            {
+                answer += (bin[i]-'0')/powerofTwo;
+                powerofTwo *= 2.0;
+            }
+
+            return answer;
+        }
+        IDictionary<char, double> probality_gathering(string data)
+        {
+            int total = data.Length;
+            IDictionary<char, double> table = new Dictionary<char, double>();
+            foreach (char c in data)
+            {
+                if (table.ContainsKey(c))
+                {
+                    table[c] = table[c] + (double)1 / total;
+                }
+                else
+                {
+                    table.Add(c, (double)1 / total);
+                }
+            }
+            return table;
+        }
+
+        string generating_codeword(double low, double high)
+        {
+            string codeword = "";
+            int k = 0;
+            while(fractionBinarytoDecimal(codeword) < low)
+            {
+                codeword += '1';
+                if(fractionBinarytoDecimal(codeword) > high)
+                {
+                    codeword = codeword.Remove(k)+'0';
+                }
+                k++;
+            }
+            return codeword;
+        }
+
+        void encodeArithmetic(string data)
+        {
+            //frequency gathering into probality
+            IDictionary<char, double> table = probality_gathering(data);
+            probility_table = table;
+
+            //set up low, high for each character
+            IDictionary<char, double> range_low = new Dictionary<char, double>();
+            IDictionary<char, double> range_high = new Dictionary<char, double>();
+            double current_low = 0;
+            string prob_distribution = "";
+            foreach (var kvp in table)
+            {
+                range_low.Add(kvp.Key, current_low);
+                range_high.Add(kvp.Key, current_low + kvp.Value);
+                current_low += kvp.Value;
+                prob_distribution += string.Format("symbol: {0}, {1}, [{2},{3})\r\n", kvp.Key, kvp.Value, range_low[kvp.Key], range_high[kvp.Key]);
+            }
+            textBox3.Text = prob_distribution;
+
+            //just for testing;
+            //data = "caee\u25a0";
+
+            //Arithmetic on the go and get low and high of entire string
+            int size = data.Length;
+            double low = 0.0, high = 1.0, range = 1.0;
+            string test = string.Format("Begin: {0}  [{1},{2}), {3}\r\n", ' ', low, high, range);
+            for(int i = 0; i < size; i++)
+            {
+                char c = data[i];
+                high = low + range * range_high[c];
+                low = low + range * range_low[c];
+                range = high - low;
+                test += string.Format("symbol: {0}, [{1},{2}), {3}\r\n", c, low, high, range);
+            }
+            Console.WriteLine(test);
+
+            //Generating codeword
+            string encoded = generating_codeword(low, high);
+
+            textBox2.Text = encoded;
+        }
         private void button6_Click(object sender, EventArgs e)
         {
-            string kq = "";
-            string liness = textBox1.Text;
-            kq=arimetic_coding(liness);
-            textBox2.Text = kq;
+            algorithm = AlgorithmType.ArithmeticCoding;
+            string lines = "";
+            if (System.IO.File.Exists(filename))
+            {
+                string[] line = System.IO.File.ReadAllLines(filename);
+                for (int i = 0; i < line.Length - 1; i++)
+                {
+                    lines = lines + line[i] + '\n';
+                };
+                lines += line[line.Length - 1];
+                lines += black_box;
+                
+                encodeArithmetic(lines);
+            };
         }
         string arimetic_decoding(string a,int sl)
         {
@@ -630,22 +771,83 @@ namespace WindowsFormsApp17
 
         private void button8_Click(object sender, EventArgs e)
         {
-            string kq = "";
-            string[] lines = new string[2000000];
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.Filter = "bin files (*.bin)|*.bin";
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                filename = dlg.FileName;
+            }
+            string encoded = "";
             if (System.IO.File.Exists(filename))
             {
-                lines = System.IO.File.ReadAllLines(filename);
-                int sl = Int32.Parse(lines[0]);
-                for (int i = 1; i < lines.Length - 1; i++)
+                //read binary files
+                byte[] filebytes = System.IO.File.ReadAllBytes(filename);
+                encoded = string.Concat(filebytes.Select(b => Convert.ToString(b, 2).PadLeft(8, '0')));
+                textBox1.Text = encoded;
+
+                //open and read probility file
+                string probilityFile = filename.Split('.')[0] + "_probility.txt";
+                string[] raw_content = System.IO.File.ReadAllLines(probilityFile);
+                string content = raw_content[0];
+                for (int i = 1; i < raw_content.Length; i++)
                 {
-                    string[] l = new string[4];
-                    l = lines[i].Split(' ');
-                    tudien_arimetic[i-1].low = Double.Parse(l[0]);
-                    tudien_arimetic[i-1].high = Double.Parse(l[1]);
-                    if (l[2] == "") tudien_arimetic[i - 1].kitu = ' '; else tudien_arimetic[i - 1].kitu = l[2][0];
-                };
-                kq = arimetic_decoding(lines[lines.Length - 1], sl);
-                textBox2.Text = kq;
+                    content += '\n' + raw_content[i];
+                }
+
+                //push probility to dictionary
+                string[] dic_content = content.Split('\u09f0');
+                IDictionary<char, double> table = new Dictionary<char, double>();
+                for (int i = 0; i < dic_content.Length; i++)
+                {
+                    char key = dic_content[i][0];
+                    double val = double.Parse(dic_content[i].Substring(2));
+                    table.Add(key, val);
+                }
+
+                //set up low, high for each character
+                IDictionary<char, double> range_low = new Dictionary<char, double>();
+                IDictionary<char, double> range_high = new Dictionary<char, double>();
+                double current_low = 0;
+                string prob_distribution = "";
+                foreach (var kvp in table)
+                {
+                    range_low.Add(kvp.Key, current_low);
+                    range_high.Add(kvp.Key, current_low + kvp.Value);
+                    current_low += kvp.Value;
+                    prob_distribution += string.Format("symbol: {0}, {1}, [{2},{3})\r\n", kvp.Key, kvp.Value, range_low[kvp.Key], range_high[kvp.Key]);
+                }
+                textBox3.Text = prob_distribution;
+
+
+                //get fraction binary code and convert to decimal
+                double value = fractionBinarytoDecimal(encoded);
+                Console.WriteLine("begin value: {0}", value);
+
+                //decode on the go
+                double low, high, range;
+                string decoded = "";
+                string decoded_for_preview = "";
+                char s = '\0';
+                do {
+                    foreach(var kvp in range_high)
+                    {
+                        if (range_low[kvp.Key] <= value && value < kvp.Value)
+                        {
+                            s = kvp.Key;
+                            break;
+                        }
+                    }
+                    if (s == '\n')
+                        decoded_for_preview += '\r';
+                    decoded_for_preview += s;
+                    decoded += s;
+                    low = range_low[s];
+                    high = range_high[s];
+                    range = high - low;
+                    value = (value - low) / range;
+                } while (s != black_box);
+                decoded = decoded.Remove(decoded.Length - 1);
+                textBox2.Text = decoded_for_preview;
             };
         }
 
